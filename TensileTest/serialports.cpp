@@ -66,6 +66,7 @@ void SerialPorts::portClose()
 
 void SerialPorts::writeData(QString row)
 {
+    Q_UNUSED(row);
     //serial->write(row, Q_INT64_C());
 }
 

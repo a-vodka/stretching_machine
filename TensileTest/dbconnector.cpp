@@ -72,10 +72,11 @@ void DBConnector::deleteSeries(int seriesNum)
 
 QSqlQuery DBConnector::getSeriesNames()
 {
-    query->exec("SELECT series_name FROM experiment_info");
-    qDebug() << query->lastError();
+    QSqlQuery q(db);
+    q.exec("SELECT series_name FROM experiment_info");
+    qDebug() << q.lastError();
 
-    return *query;
+    return q;
 }
 
 int DBConnector::getSeries(QString name)
@@ -113,22 +114,24 @@ int DBConnector::countSeries()
 
 QSqlQuery DBConnector::getData(int seriesNum, int experimentNum, double time)
 {
+    QSqlQuery q(db);
     QString queryText = "SELECT F, delta_l FROM experiment_data WHERE series_num = ";
     queryText.append(QString::number(seriesNum) + " AND experiment_num = " + QString::number(experimentNum) + " AND time = " + QString::number(time));
 
-    query->exec(queryText);
-    qDebug() << query->lastError();
+    q.exec(queryText);
+    qDebug() << q.lastError();
 
-    return *query;
+    return q;
 }
 
 QSqlQuery DBConnector::getExperiments(int seriesNum)
 {
+    QSqlQuery q(db);
     QString queryText = "SELECT DISTINCT experiment_num FROM experiment_data WHERE series_num = ";
     queryText.append(QString::number(seriesNum));
 
-    query->exec(queryText);
-    qDebug() << query->lastError();
+    q.exec(queryText);
+    qDebug() << q.lastError();
 
-    return *query;
+    return q;
 }
