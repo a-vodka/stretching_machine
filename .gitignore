@@ -1,0 +1,17 @@
+# Build directories
+build/
+build-*/
+TensileTest/build/
+TensileTest/build-*/
+
+# Qt Creator
+*.user
+*.user.*
+.qmake.stash
+
+# Object files and binaries
+*.o
+*.obj
+*.exe
+*.dll
+*.a
