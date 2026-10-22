@@ -92,34 +92,27 @@ QSerialPort *SerialPorts::getPort()
 
 double SerialPorts::getSeria()
 {
-    QString ba1;
-    double result;
-    try
-    {
-        ba1 = serial->readLine();
-        ba1 = ba1.mid(1, 7);
+    if (!serial || !serial->isOpen())
+        return 0.0;
 
-        try
+    QByteArray raw = serial->readLine();
+    if (raw.isEmpty())
+        return lastResult;
+
+    QString ba1 = QString::fromLatin1(raw).trimmed();
+    if (ba1.length() >= 7)
+    {
+        QString numPart = ba1.mid(1, 7).trimmed();
+        bool ok = false;
+        double val = numPart.toDouble(&ok);
+        if (ok)
         {
-            result = abs(ba1.toDouble());
-            //qDebug () << "Serial: " << result;
-        }
-        catch (QString error) {
-            result = lastResult;
+            lastResult = std::abs(val);
+            return lastResult;
         }
     }
-    catch(QString error)
-    {
-        result = lastResult;
-    }
 
-    if (result == 0)
-        result = lastResult;
-
-    lastResult = result;
-
-    return result;
-
+    return lastResult;
 }
 
 

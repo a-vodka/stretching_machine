@@ -7,17 +7,17 @@
 
 class graphic
 {
-    QCustomPlot* Graphic;   //it's a widget where you display a graphic
-    QCPCurve* plot; //it's a curve which displays on the widget
+    QCustomPlot* Graphic = nullptr;   //it's a widget where you display a graphic
+    QCPCurve* plot = nullptr;         //it's a curve which displays on the widget
 
-    int dotIndex = 0;   //it's a number descriming dots order
-    //QVector<QCPCurveData> Dots;   //whole dots array
+    int dotIndex = 0;                 //it's a number descriming dots order
 public:
     graphic();
     graphic(QCustomPlot *Graphic);
     ~graphic();
-    void setQCustomPlot(QCustomPlot *Graphic);  //method for determing Graphic and plot
-    void Add(double l, double f);   //add a new dot to Dots and display one
+    void setQCustomPlot(QCustomPlot *Graphic);
+    void setAxesLabels(const QString &xLabel, const QString &yLabel);
+    void Add(double x, double f);
     void Replot();
     void clear();
 };

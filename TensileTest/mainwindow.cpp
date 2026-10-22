@@ -275,7 +275,7 @@ void MainWindow::on_drawB_clicked()
     drawingTime = 0;
     if (ui->radioNew->isChecked())
     {
-        if (Force.getConection())// && Length.getConection())
+        if (Force.getConection())
         {
             QMessageBox::information(this, "Drawing", "New");
 
@@ -285,7 +285,7 @@ void MainWindow::on_drawB_clicked()
 
             if(!currentSeriesNum)
             {
-                currentSeriesNum = db->countSeries() + 1;   //QString material, int height, int width, int length, QStringList properties
+                currentSeriesNum = db->countSeries() + 1;
                 QString material = QInputDialog::getText(this, "New Series", "What's the material?");
                 int length = QInputDialog::getInt(this, "New Series", "What's the length?");
                 int width = QInputDialog::getInt(this, "New Series", "What's the width?");
@@ -294,27 +294,30 @@ void MainWindow::on_drawB_clicked()
                 db->createSeries(currentSeriesNum, currentSeriesName, material, height, width, length, properties);
             }
 
-            currentExperiment = QInputDialog::getInt(this, "New Experiment", "What's the number of the experiment?");   
+            currentExperiment = QInputDialog::getInt(this, "New Experiment", "What's the number of the experiment?");
 
-            //serials
-            Length.addPort();
-            Length.portOpen();
+            // Setup axis labels and ports based on whether length sensor is connected
+            if (Length.getConection())
+            {
+                Graphic.setAxesLabels("Delta L", "Force");
+                Length.addPort();
+                Length.portOpen();
+            }
+            else
+            {
+                Graphic.setAxesLabels("Time (s)", "Force");
+            }
+
             Force.addPort();
             Force.portOpen();
-            //VFD.open();
-            vfd2.addPort();
-            vfd2.portOpen();
-                //v
 
-            //vfd
-            //VFD.run();
-            vfd2.run();
-           // vfd2.setFrequency(ui->spinFrequency->value());
-
-                //v
-
-            //VFD.setFrequency(ui->spinFrequency->value());
-
+            // VFD is optional (only if connected)
+            if (vfd2.getConection())
+            {
+                vfd2.addPort();
+                vfd2.portOpen();
+                vfd2.run();
+            }
 
             //timers
             timerDraw->startTimer(1000);
@@ -325,12 +328,10 @@ void MainWindow::on_drawB_clicked()
             ui->closeBLength->setEnabled(false);
             ui->drawB->setEnabled(false);
             ui->stopDB->setEnabled(true);
-
-
         }
         else
         {
-            QMessageBox::information(this, "CAUTION!!!", "No connection");
+            QMessageBox::information(this, "CAUTION!!!", "No connection to Force sensor");
         }
     }
     else if(ui->radioExisting->isChecked())
@@ -338,6 +339,17 @@ void MainWindow::on_drawB_clicked()
         qDebug () << "EXSST";
         currentSeriesNum = ui->comSeries->currentIndex() + 1;
         currentExperiment = ui->comExperiment->currentText().toInt();
+
+        // Check if delta_l was recorded for this experiment or if it was F-t test
+        QSqlQuery sample = db->getData(currentSeriesNum, currentExperiment, 0.5);
+        if (sample.next() && sample.value(1).toDouble() != 0)
+        {
+            Graphic.setAxesLabels("Delta L", "Force");
+        }
+        else
+        {
+            Graphic.setAxesLabels("Time (s)", "Force");
+        }
 
         QMessageBox::information(this, "Drawing", "Existing");
 
@@ -362,23 +374,26 @@ void MainWindow::clockDraw()
 void MainWindow::clockSerials()
 {
     double f = Force.getSeria();
-    double l;
-    if (f > 5)
+    double l = 0;
+
+    if (Length.getConection())
     {
         l = Length.getSeria();
-
         Graphic.Add(l, f);
-        //qDebug () << "l: " << l << "f: " << f;
-
-        db->insertData(currentSeriesNum, currentExperiment, drawingTime, f, l); // Nikita: drawing time? Roma: Yes
-
-        //Widget
-        ui->lcdN->display(drawingTime);
-        ui->CurrentLengthLCD->display(l);
-        ui->CurrentForceLCD->display(f);
-
-        drawingTime += 0.1;
     }
+    else
+    {
+        Graphic.Add(drawingTime, f);
+    }
+
+    db->insertData(currentSeriesNum, currentExperiment, drawingTime, f, l);
+
+    //Widget
+    ui->lcdN->display(drawingTime);
+    ui->CurrentLengthLCD->display(l);
+    ui->CurrentForceLCD->display(f);
+
+    drawingTime += 0.1;
 }
 
 void MainWindow::clockExistingData()
@@ -386,10 +401,10 @@ void MainWindow::clockExistingData()
     qDebug() << currentSeriesNum << currentExperiment << drawingTime;
     QSqlQuery data = db->getData(currentSeriesNum, currentExperiment, drawingTime);
 
-    double F;
-    double delta_l;
+    double F = 0;
+    double delta_l = 0;
 
-    if(data.next()) //OK
+    if(data.next())
     {
         F = data.value(0).toDouble();
         delta_l = data.value(1).toDouble();
@@ -399,11 +414,11 @@ void MainWindow::clockExistingData()
     {
         graphFromDB->stop();
         qDebug() << 1;
+        return;
     }
 
-    Graphic.Add(delta_l, F);
-
-    //Graphic.clear();
+    double xVal = (delta_l != 0) ? delta_l : drawingTime;
+    Graphic.Add(xVal, F);
     Graphic.Replot();
 
     //Widget
@@ -413,27 +428,27 @@ void MainWindow::clockExistingData()
     drawingTime += 0.1;
 }
 
-
 void MainWindow::on_stopDB_clicked()
 {
     if (ui->radioNew->isChecked())
     {
         //vfd
-       // VFD.stop();
-        vfd2.stop();
-        //v
+        if (vfd2.getConection())
+        {
+            vfd2.stop();
+            vfd2.portClose();
+        }
 
         //serials
         Force.portClose();
-        Length.portClose();
-        //vfd2.portClose();
+        if (Length.getConection())
+        {
+            Length.portClose();
+        }
 
         //timers
         timerDraw->stopTimer();
         timerSerials->stopTimer();
-
-        //graph
-        //Graphic.clear();
 
         //style button
         ui->closeBForce->setEnabled(true);
@@ -443,15 +458,8 @@ void MainWindow::on_stopDB_clicked()
     }
     else
     {
-        //vfd
-        //VFD.stop();
-        //vfd
-
         //Timer
         graphFromDB->stop();
-
-        //graph
-        //Graphic.clear();
 
         //style button
         ui->drawB->setEnabled(true);

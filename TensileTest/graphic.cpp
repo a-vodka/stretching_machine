@@ -12,8 +12,7 @@ graphic::graphic(QCustomPlot *Graphic)
 
 graphic::~graphic()
 {
-    //delete plot;
-    //delete Graphic;
+
 }
 
 void graphic::setQCustomPlot(QCustomPlot *Graphic)
@@ -25,32 +24,48 @@ void graphic::setQCustomPlot(QCustomPlot *Graphic)
     this->plot->setPen(QPen(Qt::black));
     this->Graphic->setInteraction(QCP::iRangeDrag, true);
     this->Graphic->setInteraction(QCP::iRangeZoom, true);
-    //this->Graphic->setInteractions(QCP::iRangeDrag | QCP::iRangeZoom | QCP::iSelectPlottables);
     this->Graphic->axisRect()->setupFullAxesBox();
-    this->Graphic->rescaleAxes();
 
     this->Graphic->xAxis->setLabel("Delta L");
     this->Graphic->yAxis->setLabel("Force");
+    this->Graphic->rescaleAxes();
 }
 
-
-void graphic::Add(double l, double f)
+void graphic::setAxesLabels(const QString &xLabel, const QString &yLabel)
 {
-    QCPCurveData recentData = QCPCurveData(dotIndex++, l, f);
-    this->Graphic->rescaleAxes();
-    //Dots.append(recentData);
-    //plot->data()->set(Dots, true);
+    if (this->Graphic)
+    {
+        this->Graphic->xAxis->setLabel(xLabel);
+        this->Graphic->yAxis->setLabel(yLabel);
+        this->Graphic->replot();
+    }
+}
 
+void graphic::Add(double x, double f)
+{
+    if (!plot || !Graphic)
+        return;
+
+    QCPCurveData recentData = QCPCurveData(dotIndex++, x, f);
     plot->data()->add(recentData);
+    this->Graphic->rescaleAxes();
 }
 
 void graphic::Replot()
 {
-    Graphic->replot();
+    if (Graphic)
+        Graphic->replot();
 }
 
 void graphic::clear()
 {
-    Graphic->clearPlottables();
-    this->plot = new QCPCurve(this->Graphic->xAxis, this->Graphic->yAxis);
+    dotIndex = 0;
+    if (Graphic)
+    {
+        Graphic->clearPlottables();
+        this->plot = new QCPCurve(this->Graphic->xAxis, this->Graphic->yAxis);
+        this->plot->setPen(QPen(Qt::black));
+        this->Graphic->rescaleAxes();
+        this->Graphic->replot();
+    }
 }
